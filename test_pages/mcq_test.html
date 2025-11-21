@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MCQ Test Page</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 24px; }
+      .question { font-weight: bold; margin-bottom: 12px; }
+      .options { margin-left: 12px; }
+      .trigger { margin-top: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="question">What is the capital of France?</div>
+    <div class="options">
+      <label><input type="radio" name="q1" value="A"> A) Madrid</label><br>
+      <label><input type="radio" name="q1" value="B"> B) Berlin</label><br>
+      <label><input type="radio" name="q1" value="C"> C) Paris</label><br>
+      <label><input type="radio" name="q1" value="D"> D) Rome</label>
+    </div>
+
+    <div class="trigger">
+      <button id="scan">Trigger MCQ Scan</button>
+      <p>Or click the extension toolbar button. The page will show a brief overlay with the result.</p>
+    </div>
+
+    <script>
+      document.getElementById('scan').addEventListener('click', () => {
+        // Send a window message that the content script listens for
+        window.postMessage({ type: 'MCQ_SCAN' }, '*');
+      });
+    </script>
+  </body>
+</html>

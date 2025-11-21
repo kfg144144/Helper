@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MCQ Gemini Helper - Options</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 16px; }
+      label { display:block; margin-top:8px; }
+      input[type=text] { width: 100%; padding:8px; }
+      button { margin-top:12px; padding:8px 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>MCQ Gemini Helper - Options</h1>
+    <p>Enter your Gemini API key (x-goog-api-key). It will be stored in extension storage.</p>
+    <label for="key">GEMINI API KEY</label>
+    <input id="key" type="text" placeholder="Enter API key here" />
+    <div>
+      <button id="save">Save</button>
+      <button id="clear">Clear</button>
+    </div>
+
+    <script>
+      const keyInput = document.getElementById('key');
+      const saveBtn = document.getElementById('save');
+      const clearBtn = document.getElementById('clear');
+
+      // load
+      chrome.storage.sync.get(['GEMINI_API_KEY'], (items) => {
+        if (items.GEMINI_API_KEY) keyInput.value = items.GEMINI_API_KEY;
+      });
+
+      saveBtn.addEventListener('click', () => {
+        const val = keyInput.value.trim();
+        chrome.storage.sync.set({ GEMINI_API_KEY: val }, () => {
+          alert('Saved');
+        });
+      });
+
+      clearBtn.addEventListener('click', () => {
+        keyInput.value = '';
+        chrome.storage.sync.remove('GEMINI_API_KEY', () => { alert('Cleared'); });
+      });
+    </script>
+  </body>
+</html>
