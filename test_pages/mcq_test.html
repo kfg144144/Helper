@@ -11,12 +11,77 @@
     </style>
   </head>
   <body>
-    <div class="question">What is the capital of France?</div>
-    <div class="options">
-      <label><input type="radio" name="q1" value="A"> A) Madrid</label><br>
-      <label><input type="radio" name="q1" value="B"> B) Berlin</label><br>
-      <label><input type="radio" name="q1" value="C"> C) Paris</label><br>
-      <label><input type="radio" name="q1" value="D"> D) Rome</label>
+    <div id="mcq-root">
+      <div class="question" id="question">What is the capital of France?</div>
+      <div class="options" id="options">
+        <label><input type="radio" name="q1" value="A"> A) Madrid</label><br>
+        <label><input type="radio" name="q1" value="B"> B) Berlin</label><br>
+        <label><input type="radio" name="q1" value="C"> C) Paris</label><br>
+        <label><input type="radio" name="q1" value="D"> D) Rome</label>
+      </div>
     </div>
+
+    <div class="trigger">
+      <button id="next">Next Question</button>
+      <button id="manual">Manual Trigger</button>
+      <p>Click "Next Question" to cycle through sample MCQs. The extension auto-scans when the question changes.</p>
+    </div>
+
+    <script>
+      const questions = [
+        {
+          q: 'What is the capital of France?',
+          opts: ['Madrid', 'Berlin', 'Paris', 'Rome']
+        },
+        {
+          q: 'Which planet is known as the Red Planet?',
+          opts: ['Venus', 'Mars', 'Jupiter', 'Saturn']
+        },
+        {
+          q: 'Which element has the chemical symbol O?',
+          opts: ['Gold', 'Oxygen', 'Silver', 'Hydrogen']
+        },
+        {
+          q: 'Which language is primarily used for Android app development?',
+          opts: ['Swift', 'Kotlin', 'PHP', 'Ruby']
+        }
+      ];
+
+      let idx = 0;
+      const questionEl = document.getElementById('question');
+      const optionsEl = document.getElementById('options');
+
+      function renderQuestion(i) {
+        const item = questions[i % questions.length];
+        questionEl.textContent = item.q;
+        // remove previous options
+        optionsEl.innerHTML = '';
+        const name = 'q1';
+        item.opts.forEach((opt, j) => {
+          const label = document.createElement('label');
+          const input = document.createElement('input');
+          input.type = 'radio';
+          input.name = name;
+          input.value = String.fromCharCode(65 + j);
+          label.appendChild(input);
+          label.appendChild(document.createTextNode(' ' + String.fromCharCode(65 + j) + ') ' + opt));
+          optionsEl.appendChild(label);
+          optionsEl.appendChild(document.createElement('br'));
+        });
+      }
+
+      document.getElementById('next').addEventListener('click', () => {
+        idx = (idx + 1) % questions.length;
+        renderQuestion(idx);
+      });
+
+      // Manual trigger for testing: posts the MCQ_SCAN message the content script listens to
+      document.getElementById('manual').addEventListener('click', () => {
+        window.postMessage({ type: 'MCQ_SCAN' }, '*');
+      });
+
+      // Initial render
+      renderQuestion(idx);
+    </script>
   </body>
 </html>
