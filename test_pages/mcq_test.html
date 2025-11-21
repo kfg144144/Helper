@@ -18,17 +18,5 @@
       <label><input type="radio" name="q1" value="C"> C) Paris</label><br>
       <label><input type="radio" name="q1" value="D"> D) Rome</label>
     </div>
-
-    <div class="trigger">
-      <button id="scan">Trigger MCQ Scan</button>
-      <p>Or click the extension toolbar button. The page will show a brief overlay with the result.</p>
-    </div>
-
-    <script>
-      document.getElementById('scan').addEventListener('click', () => {
-        // Send a window message that the content script listens for
-        window.postMessage({ type: 'MCQ_SCAN' }, '*');
-      });
-    </script>
   </body>
 </html>

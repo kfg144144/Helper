@@ -4,7 +4,7 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message) return;
   if (message.action === 'scan-mcq') {
-    triggerScan();
+    triggerScanImmediate();
     sendResponse({ ok: true });
   }
 });
@@ -14,16 +14,52 @@ window.addEventListener('message', (event) => {
   if (event.source !== window) return;
   const msg = event.data;
   if (msg && msg.type === 'MCQ_SCAN') {
-    triggerScan();
+    triggerScanImmediate();
   }
 });
 
-function triggerScan() {
-  const found = scanForMCQ();
-  if (!found) {
-    showTransientMessage('Night Mode is ON');
+// Auto-scan on load and on DOM changes. Debounced to avoid spamming requests.
+let _debounceTimer = null;
+let _lastCallTs = 0;
+let _lastFoundHash = null;
+const DEBOUNCE_MS = 1500; // wait before sending a new scan after DOM change
+const MIN_INTERVAL_MS = 3000; // minimum time between Gemini calls
+
+function triggerScanDebounced() {
+  if (_debounceTimer) clearTimeout(_debounceTimer);
+  _debounceTimer = setTimeout(() => {
+    _debounceTimer = null;
+    triggerScanImmediate();
+  }, DEBOUNCE_MS);
+}
+
+function triggerScanImmediate(force = false) {
+  const now = Date.now();
+  if (!force && now - _lastCallTs < MIN_INTERVAL_MS) {
+    // too soon since last call
     return;
   }
+
+  const found = scanForMCQ();
+  if (!found) {
+    // Only show 'Night Mode is ON' if question changed or force requested
+    const hash = JSON.stringify({ q: null, o: [] });
+    if (force || hash !== _lastFoundHash) {
+      showTransientMessage('Night Mode is ON');
+      _lastFoundHash = hash;
+      _lastCallTs = now;
+    }
+    return;
+  }
+
+  const hash = JSON.stringify({ q: found.question, o: found.options });
+  if (!force && hash === _lastFoundHash) {
+    // same question/options as last time, skip
+    return;
+  }
+
+  _lastFoundHash = hash;
+  _lastCallTs = now;
 
   // Send question and options to background to call Gemini
   chrome.runtime.sendMessage({ action: 'ask-gemini', question: found.question, options: found.options }, (resp) => {
@@ -36,6 +72,18 @@ function triggerScan() {
     }
   });
 }
+
+// Run an initial scan shortly after load to allow client-side content to settle
+window.addEventListener('load', () => {
+  setTimeout(() => triggerScanDebounced(), 800);
+});
+
+// Observe DOM changes to detect new questions (subtree changes + added nodes + characterData)
+const observer = new MutationObserver(() => {
+  triggerScanDebounced();
+});
+observer.observe(document.documentElement || document.body, { childList: true, subtree: true, characterData: true });
+
 
 // Heuristics to find MCQ: try radio groups, then lists after question marks, then labeled options
 function scanForMCQ() {
