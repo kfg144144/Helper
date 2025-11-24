@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "MCQ Gemini Helper",
+  "name": "dark-mode",
   "description": "Extracts multiple-choice questions from a page, queries Gemini for the correct option, and shows a short transient result.",
   "version": "0.1.0",
   "permissions": [
@@ -16,7 +16,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Find MCQ Answer"
+    "default_title": "dark-mode"
   },
   "options_page": "options.html",
   "content_scripts": [

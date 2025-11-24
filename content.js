@@ -9,6 +9,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// Simple normalizer used to compare option strings
+function normalizeText(s) {
+  return (s || '').toString().replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
 // Allow test pages to trigger a scan via window.postMessage({ type: 'MCQ_SCAN' })
 window.addEventListener('message', (event) => {
   if (event.source !== window) return;
@@ -45,7 +50,7 @@ function triggerScanImmediate(force = false) {
     // Only show 'Night Mode is ON' if question changed or force requested
     const hash = JSON.stringify({ q: null, o: [] });
     if (force || hash !== _lastFoundHash) {
-      showTransientMessage('Night Mode is ON');
+      showTransientMessage('N/A');
       _lastFoundHash = hash;
       _lastCallTs = now;
     }
@@ -66,10 +71,44 @@ function triggerScanImmediate(force = false) {
     const show = (text) => showTransientMessage(text);
 
     if (!resp || !resp.ok || !resp.answer) {
-      show('Night Mode is ON');
-    } else {
-      show(resp.answer);
+      show('N/A');
+      return;
     }
+
+    // Map the returned answer text to an option index/letter (a, b, c...)
+    const returned = resp.answer;
+    const normReturned = normalizeText(returned);
+
+    // 1) If returned is a single letter like 'A' or 'b', use it
+    const letterMatch = normReturned.match(/^([a-z])\)?$/i);
+    if (letterMatch) {
+      show(letterMatch[1].toLowerCase());
+      return;
+    }
+
+    // 2) Try to match returned text to one of the extracted options
+    let letter = null;
+    for (let i = 0; i < found.options.length; i++) {
+      const opt = found.options[i];
+      const normOpt = normalizeText(opt);
+      if (normOpt === normReturned || normOpt.includes(normReturned) || normReturned.includes(normOpt)) {
+        letter = String.fromCharCode(97 + i); // a, b, c...
+        break;
+      }
+    }
+
+    // 3) As a fallback, if returned contains an uppercase letter like 'A) Paris', pick that
+    if (!letter) {
+      for (let i = 0; i < found.options.length; i++) {
+        const letterToken = String.fromCharCode(65 + i).toLowerCase();
+        if (normReturned.includes(letterToken)) {
+          letter = String.fromCharCode(97 + i);
+          break;
+        }
+      }
+    }
+
+    show(letter || 'N/A');
   });
 }
 
@@ -191,7 +230,7 @@ function showTransientMessage(text) {
   div.textContent = text;
   Object.assign(div.style, {
     position: 'fixed',
-    top: '10%',
+    bottom: '10%',
     left: '50%',
     transform: 'translateX(-50%)',
     background: 'rgba(0,0,0,0.85)',
