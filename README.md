@@ -15,7 +15,7 @@ Installation (developer mode):
 
 Usage:
 1. Press the keyboard shortcut Alt+Shift+Z (or configure it via your browser's extension keyboard shortcuts page) while on a page containing an MCQ to trigger the scan.
-2. The extension will scan the page for an MCQ (heuristics: radio groups, lists after question marks, labeled options).
+2. The extension will scan the page for an MCQ (heuristics include: radio input groups, explicit "question" containers (class/id/data attributes), lists immediately following question text, or short labeled elements near a question). The script prefers visible radio groups or containers.
 3. It will call the Gemini API and show a brief result overlay at the bottom center of the page.
 4. Note: The toolbar button and automatic page scans do not trigger the Gemini call by default; only the keyboard shortcut or forced messages will.
 

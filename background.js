@@ -146,9 +146,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
-      // Build prompt: ask for ONLY the correct option from the list
+      // Build a robust prompt for Gemini: include the question, the labeled options
+      // and instruct the model to return ONLY the letter (A, B, C, ...) for the
+      // correct option, or "UNKNOWN" if it cannot determine the answer.
       const optionLetters = options.map((opt, idx) => `${String.fromCharCode(65 + idx)}) ${opt}`);
-      const prompt = `Question: ${question}\nOptions:\n${optionLetters.join('\n')}\n\nReturn ONLY the correct option text exactly as it appears in the list above. If you cannot determine the answer, respond with 'UNKNOWN'.`;
+      const prompt = [
+        `You are given a multiple-choice question and a list of labeled options.`,
+        `Please return ONLY the SINGLE LETTER (A, B, C, ...) corresponding to the correct option, in capital letters with no extra explanation.`,
+        `If you cannot determine the answer, return EXACTLY 'UNKNOWN'.`,
+        `Be conservative: if ambiguous, prefer 'UNKNOWN'.`,
+        `
+Question: ${question}`,
+        `Options:`,
+        ...optionLetters,
+        ``,
+        `Return only a single letter (A, B, C, ...).`
+      ].join('\n');
 
       try {
         const resp = await fetch(endpoint, {

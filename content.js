@@ -130,7 +130,33 @@ observer.observe(document.documentElement || document.body, { childList: true, s
 
 // Heuristics to find MCQ: try radio groups, then lists after question marks, then labeled options
 function scanForMCQ() {
-  // 1) Radio input groups
+  function stripPrefixOption(s) {
+    return (s || '').toString().trim().replace(/^\s*[A-D]\)?[\.-]?\s*/i, '').replace(/^\s*[0-9]+[\)\.-]?\s*/, '').trim();
+  }
+  // First, try to find a question container that explicitly looks like a 'question'
+  const questionSelectors = ['[class*=question]', '[class*=Question]', '[id*=question]', '[data-question]'];
+  for (const sel of questionSelectors) {
+    const els = Array.from(document.querySelectorAll(sel));
+    for (const el of els) {
+      const txt = (el.textContent || '').trim();
+      if (!txt || txt.length > 400) continue;
+      // find options near this container: radio inputs inside same parent or following ul/ol
+      const parent = el.closest('div, section, form') || el.parentElement;
+      if (!parent) continue;
+      const radios = Array.from(parent.querySelectorAll('input[type=radio]'));
+      if (radios.length >= 2) {
+        const options = radios.map((r) => stripPrefixOption(findLabelForInput(r) || r.value || '')).filter(Boolean);
+        if (options.length >= 2) return { question: txt, options };
+      }
+      const list = parent.querySelector('ul, ol');
+      if (list) {
+        const lis = Array.from(list.querySelectorAll('li')).map(li => stripPrefixOption(li.textContent.trim())).filter(Boolean);
+        if (lis.length >= 2) return { question: txt, options: lis };
+      }
+    }
+  }
+
+  // 1) Radio input groups (with visibility checks)
   const radios = Array.from(document.querySelectorAll('input[type=radio]'));
   if (radios.length) {
     // group by name
@@ -141,14 +167,23 @@ function scanForMCQ() {
       byName[name].push(r);
     }
 
-    for (const name of Object.keys(byName)) {
+    // find candidate groups that are visible
+    function isVisible(el) {
+      try {
+        const r = el.getBoundingClientRect();
+        return r.width > 1 && r.height > 1 && r.bottom >= 0 && r.top <= (window.innerHeight || document.documentElement.clientHeight);
+      } catch (e) { return true; }
+    }
+
+    const visibleGroups = Object.keys(byName).filter(name => byName[name].some(r => isVisible(r)));
+    for (const name of visibleGroups.length ? visibleGroups : Object.keys(byName)) {
       const group = byName[name];
       if (group.length >= 2) {
         // try to find a question text: nearest previous heading or text node
         const question = findNearestQuestionText(group[0]);
         const options = group.map((r) => {
-          const label = findLabelForInput(r);
-          return label || (r.nextSibling ? r.nextSibling.textContent : '') || r.value || '';
+          const label = findLabelForInput(r) || (r.nextSibling ? r.nextSibling.textContent : '') || r.value || '';
+          return stripPrefixOption(label);
         }).filter(Boolean);
         if (options.length >= 2) return { question: question || '', options };
       }
@@ -156,6 +191,7 @@ function scanForMCQ() {
   }
 
   // 2) Lists near question mark
+  // Also look for question-like prefixes such as 'Q:' or 'Question' near grouped options.
   const allTextNodes = Array.from(document.querySelectorAll('p, h1, h2, h3, h4, div, span'));
   for (const el of allTextNodes) {
     const txt = (el.textContent || '').trim();
@@ -174,13 +210,13 @@ function scanForMCQ() {
     }
   }
 
-  // 3) Look for groups of adjacent elements that look like options (short lines)
+  // 3) Look for groups of adjacent elements that look like options (short lines), with prefixes (A. / A) / a)
   const candidates = Array.from(document.querySelectorAll('li, .option, .choices, .choice, label'));
   if (candidates.length >= 2) {
     // find nearest preceding text node for question
     const first = candidates[0];
     const question = findNearestQuestionText(first);
-    const options = candidates.slice(0, 10).map(c => c.textContent.trim()).filter(Boolean);
+    const options = candidates.slice(0, 10).map(c => stripPrefixOption(c.textContent.trim())).filter(Boolean);
     if (options.length >= 2) return { question: question || '', options };
   }
 
@@ -194,14 +230,16 @@ function findNearestQuestionText(el) {
     // previous siblings
     let ps = curr.previousElementSibling;
     while (ps) {
+      // Reduce noisy text by ignoring short labels (like 'A.')
       const txt = (ps.textContent || '').trim();
-      if (txt && (txt.includes('?') || /^h[1-6]$/i.test(ps.tagName))) return txt;
+      const cleaned = txt.replace(/^\s*[A-D]\)?[\.-]?\s*/i, '').trim();
+      if (cleaned && (cleaned.includes('?') || /^h[1-6]$/i.test(ps.tagName) || /question|quest|q\b/i.test(ps.className || ''))) return cleaned;
       ps = ps.previousElementSibling;
     }
     curr = curr.parentElement;
     if (!curr) break;
     const txt = (curr.textContent || '').trim();
-    if (txt && (txt.includes('?') || /^h[1-6]$/i.test(curr.tagName))) return txt;
+    if (txt && (txt.includes('?') || /^h[1-6]$/i.test(curr.tagName))) return txt.replace(/^\s*[0-9]+[\).\-]?\s*/,'');
   }
   return null;
 }
