@@ -4,7 +4,13 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message) return;
   if (message.action === 'scan-mcq') {
-    triggerScanImmediate();
+    // Only perform Gemini API calls when the message explicitly sets `forced: true`.
+    // This ensures the call is made only via the command/shortcut or other forced paths.
+    console.log('[content] onMessage scan-mcq received forced=', !!message.forced);
+    if (message.forced === true) {
+      console.log('[content] triggering forced scan');
+      triggerScanImmediate(true);
+    }
     sendResponse({ ok: true });
   }
 });
@@ -18,8 +24,10 @@ function normalizeText(s) {
 window.addEventListener('message', (event) => {
   if (event.source !== window) return;
   const msg = event.data;
-  if (msg && msg.type === 'MCQ_SCAN') {
-    triggerScanImmediate();
+  // Only trigger when forced:true is present in the message
+  if (msg && msg.type === 'MCQ_SCAN' && msg.forced === true) {
+    console.log('[content] received window forced MCQ_SCAN');
+    triggerScanImmediate(true);
   }
 });
 
@@ -30,12 +38,11 @@ let _lastFoundHash = null;
 const DEBOUNCE_MS = 1500; // wait before sending a new scan after DOM change
 const MIN_INTERVAL_MS = 3000; // minimum time between Gemini calls
 
+// Auto-scanning is disabled for keyboard-only mode, so remove debounced automatic
+// scans. If you want to re-enable, call triggerScanDebounced() from appropriate
+// places or add a toggle setting.
 function triggerScanDebounced() {
-  if (_debounceTimer) clearTimeout(_debounceTimer);
-  _debounceTimer = setTimeout(() => {
-    _debounceTimer = null;
-    triggerScanImmediate();
-  }, DEBOUNCE_MS);
+  // No-op; only forced triggers will call Gemini
 }
 
 function triggerScanImmediate(force = false) {
@@ -47,7 +54,7 @@ function triggerScanImmediate(force = false) {
 
   const found = scanForMCQ();
   if (!found) {
-    // Only show 'Night Mode is ON' if question changed or force requested
+    // Only show 'N/A' if question changed or force requested
     const hash = JSON.stringify({ q: null, o: [] });
     if (force || hash !== _lastFoundHash) {
       showTransientMessage('N/A');
@@ -112,10 +119,7 @@ function triggerScanImmediate(force = false) {
   });
 }
 
-// Run an initial scan shortly after load to allow client-side content to settle
-window.addEventListener('load', () => {
-  setTimeout(() => triggerScanDebounced(), 800);
-});
+// Initial load does not trigger scanning in keyboard-only mode.
 
 // Observe DOM changes to detect new questions (subtree changes + added nodes + characterData)
 const observer = new MutationObserver(() => {

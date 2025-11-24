@@ -77,7 +77,16 @@
 
       // Manual trigger for testing: posts the MCQ_SCAN message the content script listens to
       document.getElementById('manual').addEventListener('click', () => {
-        window.postMessage({ type: 'MCQ_SCAN' }, '*');
+        // Post a forced scan for testing
+        window.postMessage({ type: 'MCQ_SCAN', forced: true }, '*');
+      });
+
+      // For convenience while testing: intercept Alt+Shift+Z on the page and post a forced scan
+      document.addEventListener('keydown', (ev) => {
+        if (ev.altKey && ev.shiftKey && ev.code === 'KeyZ') {
+          ev.preventDefault();
+          window.postMessage({ type: 'MCQ_SCAN', forced: true }, '*');
+        }
       });
 
       // Initial render

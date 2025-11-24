@@ -18,6 +18,22 @@
   "action": {
     "default_title": "dark-mode"
   },
+  "commands": {
+    "trigger-scan": {
+      "suggested_key": {
+        "default": "Alt+Shift+Z"
+      },
+      "description": "Trigger Gemini scan (Alt+Shift+Z)"
+    }
+  },
+  "commands": {
+    "trigger-scan": {
+      "suggested_key": {
+        "default": "Alt+Shift+Z"
+      },
+      "description": "Trigger MCQ scan (Alt+Shift+Z)"
+    }
+  },
   "options_page": "options.html",
   "content_scripts": [
     {

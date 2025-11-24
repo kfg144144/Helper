@@ -14,9 +14,18 @@ Installation (developer mode):
 3. Click "Load unpacked" and select this project folder.
 
 Usage:
-1. Click the extension toolbar button while on a page containing an MCQ.
+1. Press the keyboard shortcut Alt+Shift+Z (or configure it via your browser's extension keyboard shortcuts page) while on a page containing an MCQ to trigger the scan.
 2. The extension will scan the page for an MCQ (heuristics: radio groups, lists after question marks, labeled options).
-3. It will call the Gemini API. Set your API key in the options page (right-click > Options or via the extension details page) under "GEMINI API KEY".
+3. It will call the Gemini API and show a brief result overlay at the bottom center of the page.
+4. Note: The toolbar button and automatic page scans do not trigger the Gemini call by default; only the keyboard shortcut or forced messages will.
+
+Debugging & troubleshooting:
+- If pressing Alt+Shift+Z doesn't trigger anything:
+  - Open the Extensions page (chrome://extensions) → Keyboard shortcuts, and verify the command for this extension is set to Alt+Shift+Z.
+  - Right-click the extension card → Inspect service worker (background) to open the background console. Press Alt+Shift+Z and watch for console logs like "[background] command received trigger-scan".
+  - Open DevTools for the web page (F12) and check the Console for logs like "[content] onMessage scan-mcq received forced=true" and "[content] triggering forced scan".
+  - On Linux, Alt+Shift combinations are sometimes reserved for changing keyboard layout; pick a different shortcut if necessary in the Keyboard shortcuts UI.
+  - You can also test the scan locally on the test page by pressing Alt+Shift+Z in the page (the test page captures it and posts a forced message) or by pressing the "Manual Trigger" button on the test page.
 
 Notes and assumptions:
 - The extension stores the API key in chrome.storage.sync as `GEMINI_API_KEY`.

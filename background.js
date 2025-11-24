@@ -8,6 +8,8 @@ const GEMINI_API_KEY = 'AIzaSyDWAFJc8eFP6f6ZWtPeUTRnRJzxcjld5vM';
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab || !tab.id) return;
   try {
+    // Don't trigger a Gemini call from the toolbar by default (the content script
+    // will only perform the call when message.forced === true)
     chrome.tabs.sendMessage(tab.id, { action: 'scan-mcq' });
   } catch (e) {
     // tab may not have content script ready; try to inject and then message
@@ -22,6 +24,45 @@ chrome.action.onClicked.addListener(async (tab) => {
     }
   }
 });
+
+// Add a keyboard command -> send forced scan to content script in the active tab.
+if (chrome.commands && chrome.commands.onCommand) {
+  chrome.commands.onCommand.addListener(async (command) => {
+    if (command !== 'trigger-scan') return;
+    console.log('[background] command received', command);
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tabs || !tabs.length) return;
+      const tab = tabs[0];
+      if (!tab || !tab.id) return;
+      chrome.tabs.sendMessage(tab.id, { action: 'scan-mcq', forced: true }, (resp) => {
+        if (chrome.runtime.lastError) {
+          console.error('[background] sendMessage.lastError', chrome.runtime.lastError);
+        }
+        console.log('[background] sent forced scan to tab', tab.id, 'response:', resp);
+      });
+    } catch (e) {
+      console.error('[background] Failed to trigger forced scan via keyboard command', e);
+    }
+  });
+}
+
+// Add a keyboard command listener that triggers a forced scan on the active tab
+if (chrome.commands && chrome.commands.onCommand) {
+  chrome.commands.onCommand.addListener(async (command) => {
+    if (command === 'trigger-scan') {
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tabs || !tabs[0] || !tabs[0].id) return;
+        const tabId = tabs[0].id;
+        // Send a forced scan message (content script will run Gemini only for forced)
+        chrome.tabs.sendMessage(tabId, { action: 'scan-mcq', forced: true });
+      } catch (e) {
+        console.error('Error sending forced scan to active tab:', e);
+      }
+    }
+  });
+}
 
 // Helper to find a string inside an object recursively
 function findFirstString(obj) {
