@@ -3,28 +3,23 @@
   "name": "dark-mode",
   "description": "Extracts multiple-choice questions from a page, queries Gemini for the correct option, and shows a short transient result.",
   "version": "0.1.0",
-  "permissions": [
-    "storage",
-    "scripting",
-    "activeTab"
-  ],
+  "permissions": ["storage", "scripting", "activeTab"],
   "host_permissions": [
     "<all_urls>",
     "https://generativelanguage.googleapis.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "gemini-mcq@helper.extension",
+      "strict_min_version": "109.0"
+    }
   },
   "action": {
     "default_title": "dark-mode"
-  },
-  "commands": {
-    "trigger-scan": {
-      "suggested_key": {
-        "default": "Alt+Shift+Z"
-      },
-      "description": "Trigger Gemini scan (Alt+Shift+Z)"
-    }
   },
   "commands": {
     "trigger-scan": {
