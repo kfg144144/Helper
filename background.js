@@ -1,235 +1,210 @@
 // background service worker
-// Listens for action clicks and coordinates calling Gemini API when content script finds an MCQ
+// Listens for action clicks and coordinates calling Gemini API with a screenshot of the active tab
 
-// Hardcode your Gemini API key here (x-goog-api-key). Replace the placeholder with your real key.
-const GEMINI_API_KEY = "AIzaSyDC19C7No0vrDAcnhqWZMkTV5FgeDaL9eM";
+// Add your multiple API keys here
+const GEMINI_API_KEYS = [
+  "First",
+  "Second",
+  "Third",
+];
 
-// On toolbar button click, send a message to the active tab to scan for MCQs
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab || !tab.id) return;
+let currentKeyIndex = 0;
+
+async function handleScanTrigger(tab) {
+  if (!tab || (!tab.id && !tab.windowId)) return;
+
+  // Attempt to inject content script just in case it's not present
   try {
-    // Don't trigger a Gemini call from the toolbar by default (the content script
-    // will only perform the call when message.forced === true)
-    chrome.tabs.sendMessage(tab.id, { action: "scan-mcq" });
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content.js"],
+    });
   } catch (e) {
-    // tab may not have content script ready; try to inject and then message
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ["content.js"],
-      });
-      chrome.tabs.sendMessage(tab.id, { action: "scan-mcq" });
-    } catch (err) {
-      console.error("Failed to inject content script or message it:", err);
-    }
+    console.warn("Script injection failed or already injected:", e);
   }
+
+  // Notify the content script we are thinking
+  chrome.tabs.sendMessage(tab.id, { action: "show-result", text: "." }, () => {
+    // Ignore error if content script isn't ready to receive it right this millisecond
+    if (chrome.runtime.lastError) {
+    }
+  });
+
+  // Capture the visible tab image
+  chrome.tabs.captureVisibleTab(
+    tab.windowId,
+    { format: "jpeg", quality: 80 },
+    async (dataUrl) => {
+      if (chrome.runtime.lastError || !dataUrl) {
+        console.error("Failed to capture tab:", chrome.runtime.lastError);
+        chrome.tabs.sendMessage(tab.id, {
+          action: "show-result",
+          text: "Error: Cannot capture screen",
+        });
+        return;
+      }
+
+      const base64Data = dataUrl.split(",")[1];
+
+      // Updated to use the requested model
+      const endpoint =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+
+      const prompt = `You are an expert system. You are given an image of a multiple-choice question on a screen. 
+Please read the question and the options shown. 
+Return ONLY the SINGLE LETTER (A, B, C, D...) corresponding to the correct option, in capital letters with no extra explanation.
+If you cannot determine the answer, return EXACTLY 'UNKNOWN'. Be concise.`;
+
+      const requestBody = JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: "image/jpeg",
+                  data: base64Data,
+                },
+              },
+            ],
+          },
+        ],
+      });
+
+      let data = null;
+      let success = false;
+      let attempts = 0;
+      const maxAttempts = GEMINI_API_KEYS.length;
+
+      // Retry loop for API keys
+      while (attempts < maxAttempts && !success) {
+        const currentKey = GEMINI_API_KEYS[currentKeyIndex];
+
+        try {
+          const resp = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": currentKey,
+            },
+            body: requestBody,
+          });
+
+          if (resp.ok) {
+            data = await resp.json();
+            success = true;
+            break; // Success, exit loop
+          }
+
+          // Handle 429 Too Many Requests (Quota Exceeded)
+          if (resp.status === 429 || resp.status === 403) {
+            console.warn(
+              `API key at index ${currentKeyIndex} failed with status ${resp.status}. Switching to next key...`,
+            );
+            currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
+            attempts++;
+          } else {
+            // Some other error (e.g. 400 Bad Request, 500 Server Error)
+            console.error(
+              "Gemini request failed",
+              resp.status,
+              await resp.text(),
+            );
+            break; // Don't retry on non-quota errors
+          }
+        } catch (err) {
+          console.error("Network or fetch error:", err);
+          break;
+        }
+      }
+
+      if (!success || !data) {
+        // If we exhausted all keys or hit an unrecoverable error
+        let errorMsg = "Error: API request failed";
+        if (attempts >= maxAttempts) {
+          errorMsg =
+            "hm";
+        }
+        chrome.tabs.sendMessage(tab.id, {
+          action: "show-result",
+          text: errorMsg,
+        });
+        return;
+      }
+
+      let candidate = null;
+      // Extract from the response structure
+      if (data?.candidates?.[0]?.content?.parts) {
+        for (const part of data.candidates[0].content.parts) {
+          if (part.text) {
+            candidate = part.text;
+            break;
+          }
+        }
+      }
+
+      if (!candidate) {
+        candidate = "UNKNOWN";
+      }
+
+      candidate = candidate.trim();
+      let letter = "N/A";
+
+      if (candidate === "UNKNOWN") {
+        letter = "UNKNOWN";
+      } else {
+        // Grab the first alphabetical character as the likely option letter
+        const match = candidate.match(/([a-zA-Z])/);
+        if (match) {
+          letter = match[1].toUpperCase();
+        }
+      }
+
+      // Send the final result letter to the content script for display
+      chrome.tabs.sendMessage(tab.id, {
+        action: "show-result",
+        text: letter,
+      });
+    },
+  );
+}
+
+// Trigger via browser action (extension icon click)
+chrome.action.onClicked.addListener((tab) => {
+  handleScanTrigger(tab);
 });
 
-// Add a keyboard command -> send forced scan to content script in the active tab.
+// Trigger via keyboard command
 if (chrome.commands && chrome.commands.onCommand) {
   chrome.commands.onCommand.addListener(async (command) => {
-    if (command !== "trigger-scan") return;
-    console.log("[background] command received", command);
-    try {
-      const tabs = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      if (!tabs || !tabs.length) return;
-      const tab = tabs[0];
-      if (!tab || !tab.id) return;
-      chrome.tabs.sendMessage(
-        tab.id,
-        { action: "scan-mcq", forced: true },
-        (resp) => {
-          if (chrome.runtime.lastError) {
-            console.error(
-              "[background] sendMessage.lastError",
-              chrome.runtime.lastError,
-            );
-          }
-          console.log(
-            "[background] sent forced scan to tab",
-            tab.id,
-            "response:",
-            resp,
-          );
-        },
-      );
-    } catch (e) {
-      console.error(
-        "[background] Failed to trigger forced scan via keyboard command",
-        e,
-      );
+    if (command === "trigger-scan") {
+      try {
+        const tabs = await chrome.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
+        if (tabs && tabs.length > 0) {
+          handleScanTrigger(tabs[0]);
+        }
+      } catch (e) {
+        console.error("Error finding active tab for shortcut:", e);
+      }
     }
   });
 }
 
-// Helper to find a string inside an object recursively
-function findFirstString(obj) {
-  if (!obj) return null;
-  if (typeof obj === "string") return obj;
-  if (Array.isArray(obj)) {
-    for (const item of obj) {
-      const found = findFirstString(item);
-      if (found) return found;
-    }
-  } else if (typeof obj === "object") {
-    for (const k of Object.keys(obj)) {
-      const found = findFirstString(obj[k]);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-// Normalize text for matching
-function normalizeText(s) {
-  return (s || "").toString().replace(/\s+/g, " ").trim().toLowerCase();
-}
-
-// Validate Gemini's text against provided options
-function matchToOption(candidateText, options) {
-  if (!candidateText) return null;
-  const normalizedCandidate = normalizeText(candidateText);
-  const normalizedOptions = options.map((o) => normalizeText(o));
-
-  // exact match
-  for (let i = 0; i < normalizedOptions.length; i++) {
-    if (normalizedCandidate === normalizedOptions[i]) return options[i];
-  }
-
-  // single letter like 'A' or 'B' or 'a)'
-  const letterMatch = normalizedCandidate.match(/^([a-z])\)?$/i);
-  if (letterMatch) {
-    const index = letterMatch[1].toLowerCase().charCodeAt(0) - 97;
-    if (index >= 0 && index < options.length) return options[index];
-  }
-
-  // contains an option as substring
-  for (let i = 0; i < normalizedOptions.length; i++) {
-    if (
-      normalizedCandidate.includes(normalizedOptions[i]) ||
-      normalizedOptions[i].includes(normalizedCandidate)
-    ) {
-      return options[i];
-    }
-  }
-
-  // try to find a single option token inside the candidate
-  for (let i = 0; i < normalizedOptions.length; i++) {
-    const parts = normalizedOptions[i].split(" ");
-    if (parts.length && normalizedCandidate.includes(parts[0]))
-      return options[i];
-  }
-
-  return null;
-}
-
-// Handle messages from content scripts
+// Trigger via message from content script (e.g. forced scan from page)
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message) return;
-  if (message.action === "ask-gemini") {
-    (async () => {
-      const { question, options } = message;
-      if (!question || !options || !options.length) {
-        sendResponse({ ok: false, answer: null });
-        return;
-      }
-
-      // Use the hardcoded key
-      const key = GEMINI_API_KEY;
-      if (!key || key === "PASTE_YOUR_API_KEY_HERE") {
-        console.error("Gemini API key is not set in background.js");
-        sendResponse({ ok: false, answer: null });
-        return;
-      }
-
-      const endpoint =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
-
-      // Build a robust prompt for Gemini: include the question, the labeled options
-      // and instruct the model to return ONLY the letter (A, B, C, ...) for the
-      // correct option, or "UNKNOWN" if it cannot determine the answer.
-      const optionLetters = options.map(
-        (opt, idx) => `${String.fromCharCode(65 + idx)}) ${opt}`,
-      );
-      const prompt = [
-        `You are given a multiple-choice question and a list of labeled options.`,
-        `Please return ONLY the SINGLE LETTER (A, B, C, ...) corresponding to the correct option, in capital letters with no extra explanation.`,
-        `If you cannot determine the answer, return EXACTLY 'UNKNOWN'.`,
-        `Be conservative: if ambiguous, prefer 'UNKNOWN'.`,
-        `
-Question: ${question}`,
-        `Options:`,
-        ...optionLetters,
-        ``,
-        `Return only a single letter (A, B, C, ...).`,
-      ].join("\n");
-
-      try {
-        const resp = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": key,
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: prompt,
-                  },
-                ],
-              },
-            ],
-          }),
-        });
-
-        if (!resp.ok) {
-          console.error(
-            "Gemini request failed",
-            resp.status,
-            await resp.text(),
-          );
-          sendResponse({ ok: false, answer: null });
-          return;
-        }
-
-        const data = await resp.json();
-
-        // Try to extract a textual answer from response in several ways
-        let candidate = null;
-        const possibleFields = [
-          data?.candidates?.[0]?.content?.[0]?.text,
-          data?.candidates?.[0]?.message?.content?.[0]?.text,
-          data?.output?.[0]?.content?.[0]?.text,
-        ];
-        for (const p of possibleFields) {
-          if (p) {
-            candidate = p;
-            break;
-          }
-        }
-
-        if (!candidate) {
-          candidate = findFirstString(data);
-        }
-
-        const matched = matchToOption(candidate, options);
-        if (matched) {
-          sendResponse({ ok: true, answer: matched });
-        } else {
-          sendResponse({ ok: false, answer: null });
-        }
-      } catch (err) {
-        console.error("Error calling Gemini API", err);
-        sendResponse({ ok: false, answer: null });
-      }
-    })();
-
-    // Return true to indicate we'll call sendResponse asynchronously
-    return true;
+  if (message && message.action === "trigger-screenshot-scan") {
+    if (sender && sender.tab) {
+      handleScanTrigger(sender.tab);
+    } else {
+      // Fallback if sender tab is undefined but we want to capture active
+      chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+        if (tabs && tabs.length > 0) handleScanTrigger(tabs[0]);
+      });
+    }
+    // Return true or sendResponse since we're handling async
+    sendResponse({ ok: true });
   }
 });

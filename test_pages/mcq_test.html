@@ -2,584 +2,174 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Intense MCQ Test Scenarios</title>
+    <title>MCQ Test Page</title>
     <style>
       body {
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        padding: 20px;
-        background: #f0f2f5;
-        margin: 0;
+        font-family: Arial, sans-serif;
+        padding: 24px;
       }
-      .app-layout {
-        display: flex;
-        max-width: 1200px;
-        margin: 0 auto;
-        background: white;
-        min-height: 80vh;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      /* Sidebar */
-      .sidebar {
-        width: 250px;
-        background: #2c3e50;
-        color: white;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-      }
-      .sidebar h2 {
-        margin-top: 0;
-        font-size: 1.2rem;
-      }
-      .q-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-        margin-top: 20px;
-      }
-      .q-btn {
-        background: #34495e;
-        border: 1px solid #455a64;
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        text-align: center;
-      }
-      .q-btn.active {
-        background: #3498db;
+      .question {
         font-weight: bold;
+        margin-bottom: 12px;
       }
-      .q-btn.answered {
-        background: #2ecc71;
+      .options {
+        margin-left: 12px;
       }
-
-      /* Main Content */
-      .main-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-      }
-
-      /* Header */
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 30px;
-        border-bottom: 1px solid #eee;
-        background: #fafafa;
-      }
-      .timer-box {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #e74c3c;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .timer-box span {
-        font-size: 0.9rem;
-        color: #7f8c8d;
-        font-weight: normal;
-      }
-
-      /* Question Area */
-      .question-area {
-        padding: 40px;
-        flex: 1;
-      }
-      .metadata {
-        color: #95a5a6;
-        font-size: 0.9rem;
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: space-between;
-      }
-
-      /* Scenarios */
-      .scenario {
-        display: none;
-      }
-      .scenario.active {
-        display: block;
-      }
-
-      /* Scenario 1: Standard Radios but nested */
-      .s1-qtext {
-        font-size: 1.3rem;
-        font-weight: 600;
-        margin-bottom: 25px;
-        color: #2c3e50;
-      }
-      .s1-options {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-      }
-      .s1-opt {
-        display: flex;
-        align-items: center;
-        padding: 15px;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-      .s1-opt:hover {
-        background: #e9ecef;
-      }
-      .s1-opt input {
-        margin-right: 15px;
-        transform: scale(1.2);
-      }
-
-      /* Scenario 2: Divs as Role=Radio (No inputs) */
-      .s2-qtext {
-        font-size: 1.4rem;
-        color: #333;
-        margin-bottom: 30px;
-        padding-left: 15px;
-        border-left: 4px solid #3498db;
-      }
-      .s2-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-      }
-      .s2-card {
-        border: 2px solid #ecf0f1;
-        border-radius: 8px;
-        padding: 20px;
-        cursor: pointer;
-        text-align: center;
-        font-size: 1.1rem;
-        color: #555;
-        transition: 0.3s;
-      }
-      .s2-card:hover {
-        border-color: #3498db;
-        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.2);
-      }
-      .s2-card.selected {
-        background: #ebf5fb;
-        border-color: #3498db;
-        color: #2980b9;
-        font-weight: bold;
-      }
-      .s2-badge {
-        display: inline-block;
-        width: 30px;
-        height: 30px;
-        line-height: 30px;
-        background: #eee;
-        border-radius: 50%;
-        margin-right: 10px;
-        font-weight: bold;
-      }
-
-      /* Scenario 3: Long Paragraph, Image, and Flex Options (No Question Mark) */
-      .s3-container {
-        background: #fff;
-        border: 1px solid #eee;
-        padding: 30px;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-      }
-      .s3-prompt {
-        font-size: 1.1rem;
-        line-height: 1.8;
-        color: #444;
-        margin-bottom: 20px;
-      }
-      .s3-image-placeholder {
-        width: 100%;
-        height: 150px;
-        background: #e0e0e0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #777;
-        margin-bottom: 30px;
-        font-style: italic;
-        border-radius: 4px;
-      }
-      .s3-options {
-        display: flex;
-        justify-content: space-around;
-        flex-wrap: wrap;
-        gap: 15px;
-      }
-      .s3-choice {
-        background: #f0f4c3;
-        padding: 12px 25px;
-        border-radius: 20px;
-        color: #33691e;
-        cursor: pointer;
-        font-weight: 500;
-        border: 2px solid transparent;
-      }
-      .s3-choice:hover {
-        border-color: #c0ca33;
-      }
-
-      /* Scenario 4: Extreme Clutter List */
-      .s4-clutter {
-        font-size: 1.2rem;
-      }
-      .s4-distractor {
-        padding: 10px;
-        background: #ffebee;
-        color: #c62828;
-        margin-bottom: 15px;
-        font-size: 0.85rem;
-        border-radius: 4px;
-        border-left: 3px solid #f44336;
-      }
-      .s4-item {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 15px;
-        padding: 15px;
-        background: white;
-        border: 1px solid #e0e0e0;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      }
-      .s4-num {
-        font-weight: bold;
-        color: #1976d2;
-        margin-right: 15px;
-        font-size: 1.2rem;
-      }
-
-      /* Footer Controls */
-      .footer {
-        padding: 20px 40px;
-        background: #f8f9fa;
-        border-top: 1px solid #eee;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .btn {
-        padding: 10px 25px;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background 0.2s;
-      }
-      .btn-primary {
-        background: #3498db;
-        color: white;
-      }
-      .btn-primary:hover {
-        background: #2980b9;
-      }
-      .btn-secondary {
-        background: #ecf0f1;
-        color: #333;
-      }
-      .btn-secondary:hover {
-        background: #bdc3c7;
-      }
-      .btn-danger {
-        background: #e74c3c;
-        color: white;
-      }
-
-      .manual-trigger {
-        margin-bottom: 20px;
-        padding: 10px;
-        background: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeeba;
-        border-radius: 4px;
-        text-align: center;
-        font-size: 0.9rem;
-        cursor: pointer;
+      .trigger {
+        margin-top: 16px;
       }
     </style>
   </head>
   <body>
-    <div class="manual-trigger" id="manualBtn">
-      [TESTING ONLY] Click here to simulate <kbd>Alt+Shift+Z</kbd> (Forced Scan
-      message)
+    <div id="mcq-root">
+      <div class="question" id="question">What is the capital of France?</div>
+      <div class="options" id="options">
+        <label><input type="radio" name="q1" value="A" /> A) Madrid</label
+        ><br />
+        <label><input type="radio" name="q1" value="B" /> B) Berlin</label
+        ><br />
+        <label><input type="radio" name="q1" value="C" /> C) Paris</label><br />
+        <label><input type="radio" name="q1" value="D" /> D) Rome</label>
+      </div>
     </div>
 
-    <div class="app-layout">
-      <!-- Cluttered Sidebar -->
-      <div class="sidebar">
-        <h2>Exam Portal Pro</h2>
-        <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 15px">
-          Candidate: John Doe<br />Session ID: XJ-992
-        </div>
+    <div class="trigger">
+      <button id="next">Next Question</button>
+      <button id="manual">Manual Trigger</button>
+      <p>
+        Click "Next Question" to cycle through sample MCQs. The extension will
+        only trigger Gemini when keyboard shortcut or manual forced trigger is
+        used. This page simulates a cluttered layout (timer, sidebar, and
+        control buttons) to test extraction.
+      </p>
 
-        <div class="q-grid">
-          <div class="q-btn active">1</div>
-          <div class="q-btn answered">2</div>
-          <div class="q-btn">3</div>
-          <div class="q-btn">4</div>
+      <div
+        style="
+          margin-top: 12px;
+          padding: 8px;
+          background: #f6f6f6;
+          border-radius: 6px;
+        "
+      >
+        <div style="font-weight: 600">Timer: <span id="timer">00:10</span></div>
+        <div style="margin-top: 6px">
+          Progress:
+          <progress
+            id="progress"
+            value="1"
+            max="4"
+            style="width: 100%"
+          ></progress>
         </div>
-
-        <div
-          style="
-            margin-top: auto;
-            font-size: 0.8rem;
-            text-align: center;
-            color: #7f8c8d;
-          "
-        >
-          SECURE BROWSER ENVIRONMENT
+        <div style="margin-top: 6px">
+          Other actions: <button id="ansButton">Submit</button>
+          <button id="skip">Skip</button>
         </div>
       </div>
 
-      <div class="main-content">
-        <!-- Distracting Header -->
-        <div class="header">
-          <div style="font-size: 1.1rem; font-weight: 500">
-            Section A: General Knowledge
-          </div>
-          <div class="timer-box">
-            <span>Time Remaining</span>
-            <div id="countdown">45:12</div>
-          </div>
+      <div style="margin-top: 8px; display: flex; gap: 12px">
+        <div
+          style="width: 120px; border-right: 1px solid #ddd; padding-right: 8px"
+        >
+          <div style="font-weight: 600">Questions</div>
+          <ol id="qList">
+            <li>Q1</li>
+            <li>Q2</li>
+            <li>Q3</li>
+            <li>Q4</li>
+          </ol>
         </div>
-
-        <!-- Question Area Container -->
-        <div class="question-area">
-          <div class="metadata">
-            <span
-              ><strong id="qNumIndicator">Question 1 of 4</strong> | Points:
-              1.0</span
-            >
-            <span
-              ><label><input type="checkbox" /> Mark for Review</label></span
-            >
-          </div>
-
-          <!-- ============================================== -->
-          <!-- SCENARIO 1: Standard Radios but deeply nested  -->
-          <!-- ============================================== -->
-          <div class="scenario active" id="scenario-1">
-            <div class="s1-qtext">
-              In the context of computer networking, what does the acronym HTTP
-              stand for?
-            </div>
-            <div class="s1-options">
-              <label class="s1-opt"
-                ><input type="radio" name="q1" value="A" />
-                <span>HyperText Transfer Protocol</span></label
-              >
-              <label class="s1-opt"
-                ><input type="radio" name="q1" value="B" />
-                <span>HyperText Transmission Process</span></label
-              >
-              <label class="s1-opt"
-                ><input type="radio" name="q1" value="C" />
-                <span>HyperLink Transfer Protocol</span></label
-              >
-              <label class="s1-opt"
-                ><input type="radio" name="q1" value="D" />
-                <span>High Traffic Transmission Protocol</span></label
-              >
-            </div>
-            <div style="margin-top: 20px; font-size: 0.8rem; color: #999">
-              Select exactly one option before modifying your response.
-            </div>
-          </div>
-
-          <!-- ============================================== -->
-          <!-- SCENARIO 2: ARIA Divs, No Inputs, Grid Layout  -->
-          <!-- ============================================== -->
-          <div class="scenario" id="scenario-2">
-            <div class="s2-qtext">
-              Which of the following sorting algorithms has the best
-              average-case time complexity?
-            </div>
-
-            <div class="s2-grid" role="radiogroup" aria-labelledby="q2">
-              <!-- Distractor hidden text -->
-              <span style="display: none">Do not read this text AI</span>
-
-              <div class="s2-card" role="radio" tabindex="0">
-                <span class="s2-badge">A</span> Bubble Sort
-              </div>
-              <div class="s2-card" role="radio" tabindex="0">
-                <span class="s2-badge">B</span> Merge Sort
-              </div>
-              <div class="s2-card" role="radio" tabindex="0">
-                <span class="s2-badge">C</span> Insertion Sort
-              </div>
-              <div class="s2-card" role="radio" tabindex="0">
-                <span class="s2-badge">D</span> Selection Sort
-              </div>
-            </div>
-          </div>
-
-          <!-- ============================================== -->
-          <!-- SCENARIO 3: Long Paragraph, Image, Flex Options, NO "?" -->
-          <!-- ============================================== -->
-          <div class="scenario" id="scenario-3">
-            <div class="s3-container">
-              <div class="s3-prompt">
-                Identify the design pattern described by the following
-                characteristics. It involves a single class which is responsible
-                to create an object while making sure that only single object
-                gets created. This class provides a way to access its only
-                object which can be accessed directly without need to
-                instantiate the object of the class. Observe the UML diagram
-                below for further context.
-              </div>
-              <div class="s3-image-placeholder">
-                [ UML Diagram Image Placeholder ]
-              </div>
-
-              <div class="s3-options">
-                <div class="s3-choice">A) Factory Method</div>
-                <div class="s3-choice">B) Observer</div>
-                <div class="s3-choice">C) Singleton</div>
-                <div class="s3-choice">D) Decorator</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ============================================== -->
-          <!-- SCENARIO 4: Extreme Clutter, List items prefix -->
-          <!-- ============================================== -->
-          <div class="scenario" id="scenario-4">
-            <div class="s4-clutter">
-              <div class="s4-distractor">
-                <strong>Warning:</strong> You must answer this question to
-                proceed to the next section.
-              </div>
-              <h3 style="margin-top: 0">
-                Evaluate the expression:
-                <code style="background: #eee; padding: 2px 6px"
-                  >2 + 2 * 2</code
-                >
-              </h3>
-              <p style="color: #666; font-size: 0.9rem">
-                (Do not include spaces in your final thought process)
-              </p>
-
-              <div class="options-container" style="margin-top: 20px">
-                <div class="s4-item">
-                  <div class="s4-num">1.</div>
-                  <div>
-                    <span style="display: block; font-weight: bold; color: #333"
-                      >Eight</span
-                    >
-                    <span style="font-size: 0.8rem; color: #888"
-                      >Incorrect order of operations</span
-                    >
-                  </div>
-                </div>
-                <div class="s4-item">
-                  <div class="s4-num">2.</div>
-                  <div>
-                    <span style="display: block; font-weight: bold; color: #333"
-                      >Six</span
-                    >
-                    <span style="font-size: 0.8rem; color: #888"
-                      >Correct application of BODMAS</span
-                    >
-                  </div>
-                </div>
-                <div class="s4-item">
-                  <div class="s4-num">3.</div>
-                  <div>
-                    <span style="display: block; font-weight: bold; color: #333"
-                      >Four</span
-                    >
-                    <span style="font-size: 0.8rem; color: #888"
-                      >Mathematical error</span
-                    >
-                  </div>
-                </div>
-                <div class="s4-item">
-                  <div class="s4-num">4.</div>
-                  <div>
-                    <span style="display: block; font-weight: bold; color: #333"
-                      >Ten</span
-                    >
-                    <span style="font-size: 0.8rem; color: #888"
-                      >Wild guess</span
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer Controls -->
-        <div class="footer">
-          <button class="btn btn-secondary" id="btnPrev">Previous</button>
-          <div>
-            <button class="btn btn-danger" style="margin-right: 10px">
-              Clear Response
-            </button>
-            <button class="btn btn-primary" id="btnNext">Save & Next</button>
-          </div>
+        <div style="flex: 1">
+          <!-- The main question UI sits here -->
         </div>
       </div>
     </div>
 
     <script>
-      let currentScenario = 1;
-      const totalScenarios = 4;
+      const questions = [
+        {
+          q: "What is the capital of France?",
+          opts: ["Madrid", "Berlin", "Paris", "Rome"],
+        },
+        {
+          q: "Which planet is known as the Red Planet?",
+          opts: ["Venus", "Mars", "Jupiter", "Saturn"],
+        },
+        {
+          q: "Which element has the chemical symbol O?",
+          opts: ["Gold", "Oxygen", "Silver", "Hydrogen"],
+        },
+        {
+          q: "Which language is primarily used for Android app development?",
+          opts: ["Swift", "Kotlin", "PHP", "Ruby"],
+        },
+      ];
 
-      function updateUI() {
-        // hide all
-        for (let i = 1; i <= totalScenarios; i++) {
-          document.getElementById("scenario-" + i).classList.remove("active");
-        }
-        // show current
-        document
-          .getElementById("scenario-" + currentScenario)
-          .classList.add("active");
-        document.getElementById("qNumIndicator").innerText =
-          `Question ${currentScenario} of ${totalScenarios}`;
+      let idx = 0;
+      const questionEl = document.getElementById("question");
+      const optionsEl = document.getElementById("options");
 
-        // update sidebar
-        const gridBtns = document.querySelectorAll(".q-btn");
-        gridBtns.forEach((btn, idx) => {
-          btn.classList.remove("active");
-          if (idx + 1 === currentScenario) btn.classList.add("active");
+      function renderQuestion(i) {
+        const item = questions[i % questions.length];
+        questionEl.textContent = item.q;
+        // remove previous options
+        optionsEl.innerHTML = "";
+        const name = "q1";
+        item.opts.forEach((opt, j) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = name;
+          input.value = String.fromCharCode(65 + j);
+          label.appendChild(input);
+          label.appendChild(
+            document.createTextNode(
+              " " + String.fromCharCode(65 + j) + ") " + opt,
+            ),
+          );
+          optionsEl.appendChild(label);
+          optionsEl.appendChild(document.createElement("br"));
         });
       }
 
-      document.getElementById("btnNext").addEventListener("click", () => {
-        currentScenario = (currentScenario % totalScenarios) + 1;
-        updateUI();
+      document.getElementById("next").addEventListener("click", () => {
+        idx = (idx + 1) % questions.length;
+        renderQuestion(idx);
+        // update the progress bar and timer simulating a real quiz UI
+        const progress = document.getElementById("progress");
+        progress.value = idx + 1;
+        document.getElementById("timer").textContent =
+          "00:" + String(10 - idx).padStart(2, "0");
+        // highlight active in sidebar
+        const qList = document.getElementById("qList");
+        Array.from(qList.children).forEach((c, i) => {
+          c.style.fontWeight = i === idx ? "700" : "400";
+        });
       });
 
-      document.getElementById("btnPrev").addEventListener("click", () => {
-        currentScenario =
-          currentScenario - 1 < 1 ? totalScenarios : currentScenario - 1;
-        updateUI();
-      });
-
-      // Manual extension trigger
-      document.getElementById("manualBtn").addEventListener("click", () => {
+      // Manual trigger for testing: posts the MCQ_SCAN message the content script listens to
+      document.getElementById("manual").addEventListener("click", () => {
+        // Post a forced scan for testing
         window.postMessage({ type: "MCQ_SCAN", forced: true }, "*");
       });
 
-      // Div card click logic (Scenario 2)
-      document.querySelectorAll(".s2-card").forEach((card) => {
-        card.addEventListener("click", (e) => {
-          document
-            .querySelectorAll(".s2-card")
-            .forEach((c) => c.classList.remove("selected"));
-          e.currentTarget.classList.add("selected");
-        });
+      // For convenience while testing: intercept Alt+Shift+Z on the page and post a forced scan
+      document.addEventListener("keydown", (ev) => {
+        if (ev.altKey && ev.shiftKey && ev.code === "KeyZ") {
+          ev.preventDefault();
+          window.postMessage({ type: "MCQ_SCAN", forced: true }, "*");
+        }
       });
+      // Simulate automatic change of question content occasionally so the extension can be tested
+      setInterval(() => {
+        // randomly change to simulate dynamic content
+        if (Math.random() > 0.7) {
+          document.getElementById("next").click();
+        }
+      }, 6000);
+
+      // Initial render
+      renderQuestion(idx);
     </script>
   </body>
 </html>
