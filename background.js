@@ -3,9 +3,9 @@
 
 // Add your multiple API keys here
 const GEMINI_API_KEYS = [
-  "AIzaSyAHriSslw0j-KxWSLTvu6djV7UB7CExnco",//1
-  "AIzaSyBke6KeWCKLTW_VOX2pMgvhi5Q5nxbPHGo",//2
-  "AIzaSyAlpQKLuXRiefEMc5H7yOJMQs3VNPL4xIU",//3
+  "AIzaSyA7MGeej7t10HpkzkfWkX-Kzy35kaKRjkA",//1
+  "AIzaSyDy9C14t0OyTTkfW0CIOgzurAy3WvlOeWc",//2
+  "AIzaSyDLGCc0O9leqe66w4_U8bnunNk12jFonNY",//3
 ];
 
 let currentKeyIndex = 0;
